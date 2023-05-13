@@ -1,13 +1,10 @@
 // OpenCVApplication.cpp : Defines the entry point for the console application.
-//
 
 #include "stdafx.h"
 #include "common.h"
 #include <iomanip>
 
 using namespace std;
-
-int isTest = 0;
 
 void printKernelMatrix(vector<vector<double>> mx, int w)
 {
@@ -42,7 +39,7 @@ bool isInside(Mat img, int row, int col)
 	return true;
 }
 
-/* Histogram display function - display a histogram using bars (simlilar to L3 / PI)
+/* Histogram display function - display a histogram using bars
 Input:
 name - destination (output) window name
 hist - pointer to the vector containing the histogram values
@@ -98,6 +95,11 @@ void showHistogram(const string& name, vector<double> fdp, const int  hist_cols,
 	imshow(name, imgHist);
 }
 
+double min3(double a, double b, double c)
+{
+	return min(min(a, b), c);
+}
+
 struct image
 {
 	Mat mat;
@@ -109,10 +111,6 @@ struct image
 		: mat(mat), name(name), hues(hues), hist(hist) {}
 };
 
-double min3(double a, double b, double c)
-{
-	return min( min(a, b), c);
-}
 
 Mat BGRtoHSI(Mat img)
 {
@@ -121,22 +119,24 @@ Mat BGRtoHSI(Mat img)
 
 	Mat hsiImg = Mat(height, width, CV_64FC3);
 	uchar* imgData = img.data;
-	double* hsiData = (double *)hsiImg.data;
+	double* hsiData = (double*) hsiImg.data;
 
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int hi = (i * width + j) * 3;
-			int gi = i * width + j;
+			int pixel = (i * width + j) * 3;
 
 			int R, G, B;
 			double r, g, b;
 			double H, S, I;
 
-			R = imgData[hi + 2];
-			G = imgData[hi + 1];
-			B = imgData[hi];
+			R = imgData[pixel + 2];
+			G = imgData[pixel + 1];
+			B = imgData[pixel];
+			//R = img.at<Vec3b>(i, j)[2];
+			//G = img.at<Vec3b>(i, j)[1];
+			//B = img.at<Vec3b>(i, j)[0];
 
 			r = (double)R / 255;
 			g = (double)G / 255;
@@ -146,26 +146,32 @@ Mat BGRtoHSI(Mat img)
 
 			S = (I == 0 || (R == G && G == B)) ? 0 : (1 - min3(r, g, b) / I);
 
-			H = (S == 0) ? 0 : acos( ((r-g) + (r-b)) / (2 * sqrt((r-g)*(r-g) + (r-b)*(g-b))) );
+			double numerator = (r - g) + (r - b);
+			double denominator = 2 * sqrt((r - g) * (r - g) + (r - b) * (g - b));
+
+			H = (S == 0) ? 0 : acos( numerator / denominator );
 			H *= 180 / PI;
 			H = (b > g) ? 360 - H : H;
 
-			hsiData[hi + 2] = I;
-			hsiData[hi + 1] = S;
-			hsiData[hi] = H;
+			//hsiImg.at<Vec3d>(i, j)[2] = I;
+			//hsiImg.at<Vec3d>(i, j)[1] = S;
+			//hsiImg.at<Vec3d>(i, j)[0] = H;
+			hsiData[pixel + 2] = I;
+			hsiData[pixel + 1] = S;
+			hsiData[pixel] = H;
 		}
 	}
 
 	return hsiImg;
 }
 
-double getDominantHueValue(Mat img)
+double getDominantHueValue(Mat hsiImg)
 {
-	int height = img.rows;
-	int width = img.cols;
+	int height = hsiImg.rows;
+	int width = hsiImg.cols;
 
-	Mat hsiImg = BGRtoHSI(img);
-	double* hsiData = (double *)hsiImg.data;
+	//Mat hsiImg = BGRtoHSI(hsiImg);
+	//double* hsiData = (double*) hsiImg.data;
 
 	double avgHue = -1;
 
@@ -173,13 +179,12 @@ double getDominantHueValue(Mat img)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int hi = i * width * 3 + j * 3;
+			int pixel = (i * width + j) * 3;
 
-			if (hsiData[hi + 1] != 0) // S == 0
+			if (hsiImg.at<Vec3d>(i, j)[1] != 0) // S != 0
 			{
-				avgHue += hsiData[hi]; // += H
+				avgHue += hsiImg.at<Vec3d>(i, j)[0]; // += H
 			}
-
 		}
 	}
 
@@ -196,7 +201,6 @@ vector<double> getDominantHuesVector(Mat img, int gridSize)
 {
 	vector<double> dominantHues;
 
-	vector<vector<Mat>> result;
 	int width = img.cols / gridSize;
 	int height = img.rows / gridSize;
 	int startWidth = img.cols - (gridSize - 1) * width;
@@ -207,7 +211,6 @@ vector<double> getDominantHuesVector(Mat img, int gridSize)
 
 	for (int i = 0; i < gridSize; i++)
 	{
-		vector<Mat> tmp;
 		offset_x = 0;
 		for (int j = 0; j < gridSize; j++)
 		{
@@ -222,9 +225,6 @@ vector<double> getDominantHuesVector(Mat img, int gridSize)
 			double dhv = getDominantHueValue(crop);
 
 			dominantHues.push_back(dhv);
-
-			//cout << crop.rows << " ";
-			//cout << crop.cols << '\n';
 		}
 		offset_y += (i > 0) ? height : startHeight;
 	}
@@ -238,7 +238,7 @@ vector<pair<double, image>> getMostSimilar(int noValues, int gridSize, vector<do
 	for (image img : imagedb)
 	{
 		int N = 0;
-		double SUM = 0, C, D;
+		double SUM = 0;
 		for (int i = 0; i < gridSize * gridSize; i++)
 		{
 			if (dominantHues[i] != -1 && img.hues[i] != -1)
@@ -251,13 +251,17 @@ vector<pair<double, image>> getMostSimilar(int noValues, int gridSize, vector<do
 
 		if (N > 0)
 		{
-			C = sqrt(N) * 180;
-			D = 1.0 * sqrt(SUM) / C;
+			double C = sqrt(N) * 180;
+			double D = 1.0 * sqrt(SUM) / C;
 			similarity.push_back({ 1 - D, img });
+		}
+		else
+		{
+			similarity.push_back({ 0, img });
 		}
 	}
 
-	// bubble noValues times to push the most similar images to the end
+	// bubble 'noValues' times to push the most similar images to the end
 	for (int i = 0; i < noValues; i++)
 	{
 		for (int j = 0; j < similarity.size() - i - 1; j++)
@@ -279,10 +283,9 @@ vector<pair<double, image>> getMostSimilar(int noValues, int gridSize, vector<do
 	return result;
 }
 
-vector<vector<double>> gaussKernel(double sigma, int w)
+vector<vector<double>> gaussKernel(double sigma, int w, bool printKernel = false)
 {
 	double sigma22 = 2 * sigma * sigma;
-	//int w = ceil(sigma * 6);
 	int x0, y0;
 	x0 = y0 = w / 2;
 	vector<vector<double>> gauss = vector<vector<double>>(w, vector<double>(w));
@@ -302,17 +305,17 @@ vector<vector<double>> gaussKernel(double sigma, int w)
 	for (int i = 0; i < w; i++)
 		for (int j = 0; j < w; j++)
 			c += gauss[i][j];
-	printKernelMatrix(gauss, w);
+	if(printKernel) printKernelMatrix(gauss, w);
 
 	for (int i = 0; i < w; i++)
 		for (int j = 0; j < w; j++)
 			gauss[i][j] /= c;
-	printKernelMatrix(gauss, w);
+	if(printKernel) printKernelMatrix(gauss, w);
 
 	return gauss;
 }
 
-pair<vector<double>, vector<double>> gaussBidimensionalKernel(double sigma, int w)
+pair<vector<double>, vector<double>> gaussBidimensionalKernel(double sigma, int w, bool printKernel = false)
 {
 	double sigma22 = 2 * sigma * sigma;
 	int x0, y0;
@@ -330,7 +333,7 @@ pair<vector<double>, vector<double>> gaussBidimensionalKernel(double sigma, int 
 		gauss.second[i] = (1.0 / sqrt(PI * 2) / sigma) * exp(-yy / sigma22);
 	}
 
-	if (isTest == 1)
+	if (printKernel)
 	{
 		printKernelArray(gauss.first, w);
 		printKernelArray(gauss.second, w);
@@ -349,7 +352,7 @@ pair<vector<double>, vector<double>> gaussBidimensionalKernel(double sigma, int 
 	for (int i = 0; i < w; i++)
 		gauss.second[i] / c;
 
-	if (isTest == 1)
+	if (printKernel)
 	{
 		printKernelArray(gauss.first, w);
 		printKernelArray(gauss.second, w);
@@ -359,171 +362,47 @@ pair<vector<double>, vector<double>> gaussBidimensionalKernel(double sigma, int 
 	return gauss;
 }
 
-void gaussFilterTest()
+Mat gaussBidimensionalFilter(Mat src, pair<vector<double>, vector<double>> kernel)
 {
-	int w = 5;
-	double sigma = 0.8; // (double) w / 6;
-
-	vector<vector<double>> gauss = gaussKernel(sigma, w);
-
-	char fname[MAX_PATH];
-	while (openFileDlg(fname))
-	{
-		Mat src = imread(fname);
-		Mat dst = src.clone();
-
-		int height = src.rows;
-		int width = src.cols;
-
-		int k = gauss.size() / 2;
-
-		uchar* srcData = src.data;
-		uchar* dstData = dst.data;
-
-		for (int i = 0; i < height; i++)
-		{
-			for (int j = 0; j < width; j++)
-			{
-				int sum = 0, sum1 = 0, sum2 = 0;
-				for (int u = 0; u < w; u++)
-				{
-					for (int v = 0; v < w; v++)
-					{
-						if (isInside(src, i + u - k, j + v - k))
-						{
-							int hi = ((i + u - k) * width + (j + v - k)) * 3;
-							sum += srcData[hi] * gauss[u][v];
-							sum1 += srcData[hi + 1] * gauss[u][v];
-							sum2 += srcData[hi + 2] * gauss[u][v];
-						}
-					}
-				}
-				int gi = (i * width + j) * 3;
-				dstData[gi] = sum;
-				dstData[gi + 1] = sum1;
-				dstData[gi + 2] = sum2;
-			}
-		}
-
-		imshow("src", src);
-		imshow("dst", dst);
-
-		cv::waitKey();
-	}
-}
-
-void gaussBidimensionalFilterTest()
-{
-	int w = 5;
-	double sigma = 0.8; // (double) w / 6;
-
-	pair<vector<double>, vector<double>> gauss = gaussBidimensionalKernel(sigma, w);
-
-	char fname[MAX_PATH];
-	while (openFileDlg(fname))
-	{
-		Mat src = imread(fname);
-		Mat dst = src.clone();
-		Mat auxDst = src.clone();
-
-		int height = src.rows;
-		int width = src.cols;
-
-		int k = gauss.first.size() / 2;
-
-		uchar* srcData = src.data;
-		uchar* dstData = dst.data;
-		uchar* auxDstData = dst.data;
-
-		for (int i = 0; i < height; i++)
-		{
-			for (int j = 0; j < width; j++)
-			{
-				int sum = 0, sum1 = 0, sum2 = 0;
-				for (int u = 0; u < w; u++)
-				{
-					if (isInside(src, i + u - k, j + u - k))
-					{
-						int hi = ((i + u - k) * width + (j + u - k)) * 3;
-						sum +=  (gauss.second[u] * srcData[hi]);
-						sum1 += (gauss.second[u] * srcData[hi + 1]);
-						sum2 +=  (gauss.second[u] * srcData[hi + 2]);
-					}
-				}
-				int gi = (i * width + j) * 3;
-				auxDstData[gi] = sum;
-				auxDstData[gi + 1] = sum1;
-				auxDstData[gi + 2] = sum2;
-			}
-		}
-
-		for (int i = 0; i < height; i++)
-		{
-			for (int j = 0; j < width; j++)
-			{
-				int sum = 0, sum1 = 0, sum2 = 0;
-				for (int u = 0; u < w; u++)
-				{
-					if (isInside(src, i + u - k, j + u - k))
-					{
-						int hi = ((i + u - k) * width + (j + u - k)) * 3;
-						sum += gauss.first[u] * (auxDstData[hi]);
-						sum1 += gauss.first[u] * (auxDstData[hi + 1]);
-						sum2 += gauss.first[u] * (auxDstData[hi + 2]);
-					}
-				}
-				int gi = (i * width + j) * 3;
-				dstData[gi] = sum;
-				dstData[gi + 1] = sum1;
-				dstData[gi + 2] = sum2;
-			}
-		}
-
-		imshow("src", src);
-		imshow("dst", dst);
-
-		cv::waitKey();
-	}
-}
-
-Mat gaussBidimensionalFilter(Mat src)
-{
-	int w = 5;
-	double sigma = 0.8; // (double) w / 6;
-
-	pair<vector<double>, vector<double>> gauss = gaussBidimensionalKernel(sigma, w);
-
-	Mat dst = src.clone();
-	Mat auxDst;
-
 	int height = src.rows;
 	int width = src.cols;
+	int type = src.type();
 
-	int k = gauss.first.size() / 2;
+	Mat dst = Mat(height, width, type);
+	Mat auxDst = Mat(height, width, type);
 
 	uchar* srcData = src.data;
 	uchar* dstData = dst.data;
-	uchar* auxDstData = dst.data;
+	uchar* auxDstData = auxDst.data;
+
+	int w = kernel.first.size();
+	int k = w / 2;
 
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int sum = 0, sum1 = 0, sum2 = 0;
-			for (int u = 0; u < w; u++)
+			int pixel = (i * width + j) * 3;
+			if (i < k || i >= height - k || j < k || j >= width - k)
 			{
-				if (isInside(src, i + u - k, j + u - k))
-				{
-					int hi = ((i + u - k) * width + (j + u - k)) * 3;
-					sum += (gauss.second[u] * srcData[hi]);
-					sum1 += (gauss.second[u] * srcData[hi + 1]);
-					sum2 += (gauss.second[u] * srcData[hi + 2]);
-				}
+				auxDstData[pixel] = srcData[pixel];
+				auxDstData[pixel + 1] = srcData[pixel + 1];
+				auxDstData[pixel + 2] = srcData[pixel + 2];
 			}
-			int gi = (i * width + j) * 3;
-			auxDstData[gi] = sum;
-			auxDstData[gi + 1] = sum1;
-			auxDstData[gi + 2] = sum2;
+			else
+			{
+				int sum = 0, sum1 = 0, sum2 = 0;
+				for (int u = 0; u < w; u++)
+				{
+					int pixelK = (i * width + (j - k + u)) * 3;
+					sum += (kernel.first[u] * srcData[pixelK]);
+					sum1 += (kernel.first[u] * srcData[pixelK + 1]);
+					sum2 += (kernel.first[u] * srcData[pixelK + 2]);
+				}	
+				auxDstData[pixel] = sum;
+				auxDstData[pixel + 1] = sum1;
+				auxDstData[pixel + 2] = sum2;
+			}
 		}
 	}
 
@@ -531,21 +410,27 @@ Mat gaussBidimensionalFilter(Mat src)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int sum = 0, sum1 = 0, sum2 = 0;
-			for (int u = 0; u < w; u++)
+			int pixel = (i * width + j) * 3;
+			if (i < k || i >= height - k || j < k || j >= width - k)
 			{
-				if (isInside(src, i + u - k, j + u - k))
-				{
-					int hi = ((i + u - k) * width + (j + u - k)) * 3;
-					sum += gauss.first[u] * (auxDstData[hi]);
-					sum1 += gauss.first[u] * (auxDstData[hi + 1]);
-					sum2 += gauss.first[u] * (auxDstData[hi + 2]);
-				}
+				dstData[pixel] = auxDstData[pixel];
+				dstData[pixel + 1] = auxDstData[pixel + 1];
+				dstData[pixel + 2] = auxDstData[pixel + 2];
 			}
-			int gi = (i * width + j) * 3;
-			dstData[gi] = sum;
-			dstData[gi + 1] = sum1;
-			dstData[gi + 2] = sum2;
+			else
+			{
+				int sum = 0, sum1 = 0, sum2 = 0;
+				for (int u = 0; u < w; u++)
+				{
+					int pixelK = ((i - k + u) * width + j) * 3;
+					sum += (kernel.second[u] * srcData[pixelK]);
+					sum1 += (kernel.second[u] * srcData[pixelK + 1]);
+					sum2 += (kernel.second[u] * srcData[pixelK + 2]);
+				}
+				dstData[pixel] = sum;
+				dstData[pixel + 1] = sum1;
+				dstData[pixel + 2] = sum2;
+			}
 		}
 	}
 
@@ -559,7 +444,7 @@ double pearsonCorrelationCoefficient(vector<double> x, vector<double> y)
 	double sumX = 0, sumY = 0;
 	double sumX2 = 0, sumY2 = 0;
 	double sumXY = 0;
-	int n = 256;
+	int n = x.size();
 
 	for (int i = 0; i < n; i++)
 	{
@@ -576,21 +461,21 @@ double pearsonCorrelationCoefficient(vector<double> x, vector<double> y)
 	return coefficient;
 }
 
-vector<double> histogram(Mat img)
+vector<double> histogram(Mat hsiImg)
 {
 	vector<int> hist = vector<int>(256, 0);
-	int height = img.rows;
-	int width = img.cols;
+	int height = hsiImg.rows;
+	int width = hsiImg.cols;
 
-	Mat hsi = BGRtoHSI(img);
-	double* hsiData = (double*)hsi.data;
+	//Mat hsiImg = BGRtoHSI(hsiImg);
+	double* hsiImgData = (double*)hsiImg.data;
 
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int hi = (i * width + j) * 3;
-			int hue = (double)hsiData[hi] / 360 * 255;
+			int pixel = (i * width + j) * 3;
+			int hue = (double)hsiImgData[pixel] / 360 * 255;
 			hist[hue]++;
 		}
 	}
@@ -620,11 +505,16 @@ void CBIR()
 
 	vector<image> imagedb;
 
+	if (openFolderDlg(folderName) == 0)
+		return;
+
 	cout << "Grid size = ";
 	cin >> gridSize;
+	//gridSize = 10;
 
-	//if (openFolderDlg(folderName) == 0)
-	//	return;
+	double sigma = 0.8;
+	int w = 5; // ~ sigma * 6
+	pair<vector<double>, vector<double>> gaussKernel = gaussBidimensionalKernel(sigma, w);
 
 	int count = 1;
 
@@ -632,23 +522,32 @@ void CBIR()
 	while (fg.getNextAbsFile(fname))
 	{
 		cout << "Processing image " << count++ << '\n';
-		Mat src = imread(fname);
-		vector<double> dominantHues = getDominantHuesVector(src, gridSize);
-		Mat gauss = gaussBidimensionalFilter(src);
-		vector<double> hist = histogram(gauss);
+		Mat src = imread(fname, IMREAD_COLOR);
+
+		Mat hsi = BGRtoHSI(src);
+		vector<double> dominantHues = getDominantHuesVector(hsi, gridSize);
+
+		Mat gauss = gaussBidimensionalFilter(src, gaussKernel);
+		hsi = BGRtoHSI(gauss);
+		vector<double> hist = histogram(hsi);
+
 		imagedb.emplace_back(image(src, fg.getFoundFileName(), dominantHues, hist));
 	}
 
 	while (openFileDlg(fname))
 	{
-		Mat src = imread(fname);
-		vector<double> dominantHues = getDominantHuesVector(src, gridSize);
+		Mat src = imread(fname, IMREAD_COLOR);
+
+		Mat hsi = BGRtoHSI(src);
+		vector<double> dominantHues = getDominantHuesVector(hsi, gridSize);
+
 		cout << "Processing similarity... ";
 		vector<pair<double, image>> similarity = getMostSimilar(noValues, gridSize, dominantHues, imagedb);
 		cout << "done\n";
 
-		Mat srcGauss = gaussBidimensionalFilter(src);
-		vector<double> srcHistogram = histogram(srcGauss);
+		Mat gauss = gaussBidimensionalFilter(src, gaussKernel);
+		hsi = BGRtoHSI(gauss);
+		vector<double> srcHistogram = histogram(hsi);
 
 		vector<double> pearsonCoefficients;
 		for (pair<double, image> img : similarity)
@@ -657,7 +556,7 @@ void CBIR()
 			pearsonCoefficients.push_back(pearson);
 		}
 
-		for (int i = 0; i < noValues; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			for (int j = 0; j < pearsonCoefficients.size() - i - 1; j++)
 			{
@@ -669,28 +568,31 @@ void CBIR()
 			}
 		}
 
+		//display the source and 3 most similar images
+		int size = srcHistogram.size();
+		int height = 200;
 		int y = 100;
-		displayImage(src, "Selectie", y, 100);
-		showHistogram("Histograma", srcHistogram, 256, 200, 400, y);
-		for (int i = 0; i < noValues; i++)
+		displayImage(src, "Selectie", 100, y);
+		showHistogram("Histograma", srcHistogram, size, height, 400, y);
+		for (int i = 0; i < 3; i++)
 		{
 			y += 350;
 			string nameImg = "Similaritate " + to_string(i + 1);
 			string nameHist = "Histograma " + to_string(i + 1);
 			displayImage(similarity[i].second.mat, nameImg, 100, y);
-			showHistogram(nameHist, similarity[i].second.hist, 256, 200, 400, y);
+			showHistogram(nameHist, similarity[i].second.hist, size, height, 400, y);
 		}
 
 		cout << setw(40) << "Similaritate 1";
 		cout << setw(20) << "Similaritate 2";
 		cout << setw(20) << "Similaritate 3" << '\n';
 		cout << setw(20) << "Pearson";
-		for (int i = 0; i < noValues; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			cout << setw(20) << pearsonCoefficients[i];
 		}
 		cout << '\n' << setw(20) << "Dominant hues";
-		for (int i = 0; i < noValues; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			cout << setw(20) << similarity[i].first;
 		}
@@ -706,12 +608,10 @@ int main()
 	int op;
 	do
 	{
-		//system("cls");
+		system("cls");
 		cv::destroyAllWindows();
 		printf("Menu:\n");
 		printf(" 1 - CBIR\n");
-		printf(" 2 - Gauss Filter Test\n");
-		printf(" 3 - Gauss Bidimensional Filter Test\n");
 
 		printf(" 0 - Exit\n\n");
 
@@ -721,16 +621,7 @@ int main()
 		switch (op)
 		{
 			case 1:
-				isTest = 0;
 				CBIR();
-				break;
-			case 2:
-				isTest = 1;
-				gaussFilterTest();
-				break;
-			case 3:
-				isTest = 1;
-				gaussBidimensionalFilterTest();
 				break;
 		}
 	}

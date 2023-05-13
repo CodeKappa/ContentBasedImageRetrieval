@@ -1,3 +1,4 @@
 D:\Facultate\An3Sem2\PI\Laborator\Lab1\OpenCVApplication-VS2019_OCV451_basic\x64\Debug\OpenCVApplication.exe
 D:\Facultate\An3Sem2\PI\Laborator\OpenCVApplication-VS2019_OCV451_basic\x64\Debug\OpenCVApplication.exe
 D:\Facultate\An3Sem2\PI\Proiect\OpenCVApplication-VS2019_OCV451_basic\x64\Debug\CBIR_OpenCVApp.exe
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\x64\Debug\CBIR_OpenCVApp.exe

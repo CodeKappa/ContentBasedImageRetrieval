@@ -1,0 +1,47 @@
+﻿  OpenCVApplication.cpp
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(277,38): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(347,18): warning C4552: '/': result of expression not used
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(353,19): warning C4552: '/': result of expression not used
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(378,29): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(398,48): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(399,53): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(400,53): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(426,49): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(427,54): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(428,54): warning C4244: '+=': conversion from '_Ty' to 'int', possible loss of data
+          with
+          [
+              _Ty=double
+          ]
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(447,18): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(478,12): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\OpenCVApplication.cpp(572,33): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  Generating code
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+  All 584 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  OpenCVApplication.vcxproj -> D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\x64\Release\CBIR_OpenCVApp.exe
+  OpenCV\dll\Release\opencv_videoio_ffmpeg451_64.dll
+  OpenCV\dll\Release\opencv_videoio_msmf451_64.dll
+  OpenCV\dll\Release\opencv_world451.dll
+          3 file(s) copied.

@@ -1,0 +1,1 @@
+D:\GitHub\ContentBasedImageRetrieval\OpenCVApplication-VS2019_OCV451_basic\x64\Release\CBIR_OpenCVApp.exe
